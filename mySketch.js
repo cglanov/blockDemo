@@ -1,6 +1,6 @@
 const UI = {
   ts: 14,   // Text size
-  sf: 1.5,  // Scale factor (1.5x scaled up)
+  sf: 1.25,  // Scale factor (1.5x scaled up)
   bh: 30,   // Bar height
   rad: 8,   // Radius
   ind: 20,  // Indentation
@@ -60,20 +60,20 @@ if (typeof gameState !== 'undefined' && gameState === 'WIN') {
   leftPanelW = width / 3;
   rightPanelT = 100;
   rightPanelH = height - rightPanelT;
-  
-  // ------------------------------------------
-  // DRAW RIGHT PANEL (2/3 Width Full Live Render)
-  // ------------------------------------------
-  fill('#fafafa');
-  rect(leftPanelW, rightPanelT, width - leftPanelW, rightPanelH);
-  drawLiveViewport(leftPanelW);
 
   // ------------------------------------------
   // DRAW HEADER / CONTROL AREA ABOVE LIVE RENDER
   // ------------------------------------------
   fill('#f0f2f5');
   noStroke();
-  rect(leftPanelW, 0, width - leftPanelW, rightPanelT);
+  rect(leftPanelW - 30, 0, width - leftPanelW / 2, height);
+  rect(leftPanelW - 30, 0, width - leftPanelW, rightPanelT);
+	  // ------------------------------------------
+  // DRAW RIGHT PANEL (2/3 Width Full Live Render)
+  // ------------------------------------------
+  fill('#fafafa');
+  rect(leftPanelW, rightPanelT, width - leftPanelW, rightPanelH);
+  drawLiveViewport(leftPanelW);
 
   let btnX = leftPanelW + 20;
   let btnY = rightPanelT - 80;
@@ -86,6 +86,8 @@ fill(0)
 	textAlign(LEFT)
 	text('mouseX: ' + round(mouseX - leftPanelW) + '   mouseY: ' + round(mouseY - (height - rightPanelH)), btnX, btnY + btnH * 1.2)
 
+	fill(150, 100, 100)
+rect(0, 0, leftPanelW - 30, height)
   
   // Render full nested container block trees
   for (let b of activeBlocks) {
@@ -101,13 +103,10 @@ fill(0)
   }
   if (blocksBottom === 0) blocksBottom = height / 2 + 60;
 
-// Render Interactive Performance Task Validation Elements
 
-  // Draw Onscreen Progression Graphical Button
-  let nextBtnX = 20;
-  let nextBtnY = promptY + 15;
-  let nextBtnW = leftPanelW - 40;
-  let nextBtnH = 40;
+
+
+	
 
 if (keyIsDown(71)) { 
   push();
@@ -171,7 +170,14 @@ if (keyIsDown(71)) {
   pop();
 }
 textAlign(RIGHT)
-	text('hold G key to view grid', leftPanelW - 10, height - 20)
+	fill(0)
+	text('hold G key to view grid', leftPanelW - 40, height - 20)
+
+		fill(255)
+	textSize(100)
+	textStyle(BOLD)
+	textAlign(CENTER, CENTER)
+	text('OR', 100, height / 2)
 }
 
 function yOffsetForCheck(baseY, offset) {
@@ -276,12 +282,12 @@ function repositionBlock() {
   
   let leftPanelW = width / 3;
   let targetX = (leftPanelW - maxW) / 10;
-  let targetY = (height - totalH) / 4; 
+  let targetY = (height - totalH) / 8; 
   
   let currentY = targetY;
   for (let b of activeBlocks) {
     b.layout(targetX, currentY);
-    currentY += b.h;
+    currentY = height - b.h * 1.1;
   }
 }
 
@@ -479,13 +485,13 @@ function generateRandomArgs(type) {
   if (['background', 'fill', 'stroke'].includes(type)) {
      return [floor(random(0,255)), floor(random(0,255)), floor(random(0,255))];
   } else if (type === 'strokeWeight') {
-     return [floor(random(1, 20))];
+     return [floor(random(0, 40))];
   } else if (type === 'circle') {
-     return [floor(random(50, 300)), floor(random(50, 300)), floor(random(20, 100))]; // x, y, radius
+     return [floor(random(20, width * 0.5)), floor(random(50, height * 0.3)), floor(random(20, width * 0.25))]; // x, y, radius
   } else if (type === 'ellipse') {
-     return [floor(random(50, 300)), floor(random(50, 300)), floor(random(20, 100)), floor(random(20, 100))]; // x, y, w, h
+     return [floor(random(20, width * 0.5)), floor(random(50, height * 0.3)), floor(random(20, width * 0.25)), floor(random(20, width * 0.25))]; // x, y, w, h
   } else if (type === 'rect') {
-     return [floor(random(20, 200)), floor(random(20, 200)), floor(random(20, 100)), floor(random(20, 100))]; // x, y, w, h
+     return [floor(random(20, width * 0.5)), floor(random(20, height * 0.3)), floor(random(20, width * 0.25)), floor(random(20, width * 0.25))]; // x, y, w, h
   }
   return [];
 }
@@ -505,9 +511,9 @@ function generateDifferentArgs(type, baseArgs) {
         newVal = floor(random(1, 20));
       } else {
         if (i < 2) { // x, y coordinates
-           newVal = floor(random(50, 400));
+           newVal = floor(random(50, width * 0.5));
         } else { // width, height, or radius
-           newVal = floor(random(20, 150));
+           newVal = floor(random(20, height / 2));
         }
       }
       attempts++;
@@ -1422,54 +1428,3 @@ getMenuOptions() {
       'text': ['string', 'x', 'y'],
       'map': ['value', 'low', 'high', 'low', 'high'],
       'dist': ['x1', 'y1', 'x2', 'y2'],
-      'arc': ['x', 'y', 'w', 'h', 'start', 'stop'],
-      'textSize': ['pixels'],
-      'strokeWeight': ['pixels'],
-      'remainder': ['dividend', 'divisor'],
-      'translate': ['x', 'y'],
-      'rotate': ['degrees'],
-      'image': ['file', 'x', 'y', 'w', 'h'],
-		'atan2': ['y', 'x']
-    };
-
-    if (['fill', 'stroke', 'background', 'tint'].includes(type)) {
-      this.updateColorHints();
-    } else {
-      this.argHints = hints[type] || [];
-    }
-  }
-
-  updateColorHints() {
-    if (!['fill', 'stroke', 'background', 'tint'].includes(this.type)) return;
-
-    const findModeBefore = (targetBlock) => {
-      let p = targetBlock.parent;
-      if (!p) return 'RGB'; 
-
-      let list = (p.elseChildren && p.elseChildren.includes(targetBlock)) 
-                 ? p.elseChildren 
-                 : p.children;
-
-      let myIndex = list.indexOf(targetBlock);
-      let lastFoundInScope = null;
-
-      for (let i = 0; i < myIndex; i++) {
-        if (list[i].type === 'colorMode') {
-          lastFoundInScope = list[i].args[0];
-        }
-      }
-
-      if (lastFoundInScope) return lastFoundInScope;
-
-      return findModeBefore(p);
-    };
-
-    const mode = findModeBefore(this);
-
-    if (mode === 'HSB') {
-      this.argHints = ['H', 'S', 'B', 'alpha'];
-    } else {
-      this.argHints = ['R', 'G', 'B', 'alpha'];
-    }
-  }
-}
