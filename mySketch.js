@@ -231,42 +231,7 @@ function triggerGlobalLayoutRefresh() {
 
 let correctIndex = 0; // Tracks which setup (0 or 1) is currently being rendered
 
-function selectSetup() {
-  const shapeTypes = ['circle', 'rect', 'ellipse'];
-  let chosenShape = random(shapeTypes);
-  let blockTypes = ['background', 'strokeWeight', 'stroke', 'fill', chosenShape];
-  
-  let setup0 = new Block('function setup');
-  let setup1 = new Block('function setup');
-  
-  for (let type of blockTypes) {
-    let b0 = new Block(type);
-    let b1 = new Block(type);
-    
-    b0.parent = setup0;
-    b1.parent = setup1;
-    
-    // Generate valid random args for the first set
-    let args0 = generateRandomArgs(type);
-    // Generate args for the second set that are >= 25% different
-    let args1 = generateDifferentArgs(type, args0);
-    
-    b0.args = args0;
-    b1.args = args1;
-    
-    setup0.children.push(b0);
-    setup1.children.push(b1);
-  }
 
-  activeBlocks = [setup0, setup1];
-  window.workspaceBlocks = activeBlocks;
-  
-  // Randomly choose one to render on the right panel
-  correctIndex = floor(random(2));
-  renderBlocks = [cloneBlockTree(activeBlocks[correctIndex])];
-  
-  repositionBlock();
-}
 
 function repositionBlock() {
   if (activeBlocks.length === 0) return;
@@ -294,7 +259,16 @@ function repositionBlock() {
 function cloneBlockTree(b) {
   if (!b) return null;
   let clone = new Block(b.type);
-  clone.args = [...b.args];
+  
+  // Recursively clone reporter blocks that are passed into argument arrays
+  clone.args = b.args.map(arg => {
+      if (arg instanceof Block) {
+          let argClone = cloneBlockTree(arg);
+          if (argClone) argClone.parent = clone;
+          return argClone;
+      }
+      return arg;
+  });
   
   if (b.children) {
     clone.children = b.children.map(child => {
@@ -323,12 +297,12 @@ function drawLiveViewport(leftPanelW) {
   
   push();
   translate(viewX, viewY);
-  fill(255); // Global canvas shape default remains white
+  fill(255); 
   stroke(0);
   strokeWeight(1);
   liveStrokeWeight = 1;
+  window.liveTextSize = 16; // Initialize text size for execution
   
-  // Reset custom fill tracking flag for the current draw loop sequence
   window.customFillApplied = false; 
   
   for (let b of renderBlocks) {
@@ -337,90 +311,222 @@ function drawLiveViewport(leftPanelW) {
   pop();
 }
 
+function selectSetup() {
+  const shapeTypes = ['circle', 'rect', 'ellipse', 'text', 'line'];
+  let chosenShape = random(shapeTypes);
+  
+  // Configure appropriate blocks depending on the active shape
+  let blockTypes = ['background'];
+  if (chosenShape === 'text') {
+      blockTypes.push('fill', 'textSize', chosenShape);
+  } else if (chosenShape === 'line') {
+      blockTypes.push('strokeWeight', 'stroke', chosenShape);
+  } else {
+      blockTypes.push('strokeWeight', 'stroke', 'fill', chosenShape);
+  }
+  
+  let setup0 = new Block('function setup');
+  let setup1 = new Block('function setup');
+  
+  for (let type of blockTypes) {
+    let b0 = new Block(type);
+    let b1 = new Block(type);
+    
+    b0.parent = setup0;
+    b1.parent = setup1;
+    
+    let args0 = generateRandomArgs(type);
+    let args1 = generateDifferentArgs(type, args0);
+    
+    b0.args = args0;
+    b1.args = args1;
+    
+    setup0.children.push(b0);
+    setup1.children.push(b1);
+  }
+
+  // 25% chance to include mouseX/mouseY reporters
+  if (random() < 0.25) {
+      let slots0 = [];
+      let slots1 = [];
+      
+      for (let b of setup0.children) {
+          for (let i = 0; i < b.args.length; i++) {
+              if (typeof b.args[i] === 'number') slots0.push({block: b, index: i});
+          }
+      }
+      for (let b of setup1.children) {
+          for (let i = 0; i < b.args.length; i++) {
+              if (typeof b.args[i] === 'number') slots1.push({block: b, index: i});
+          }
+      }
+      
+      if (slots0.length > 0 && slots1.length > 0) {
+          let rep0 = random(['mouseX', 'mouseY']);
+          let rep1 = random(['mouseX', 'mouseY']);
+          
+          let slotIdx0 = floor(random(slots0.length));
+          let slotIdx1 = floor(random(slots1.length));
+          
+          // Ensure they are placed in different slots if both reporters match
+          if (rep0 === rep1 && slots0.length > 1) {
+              while (slotIdx1 === slotIdx0) {
+                  slotIdx1 = floor(random(slots1.length));
+              }
+          }
+          
+          let s0 = slots0[slotIdx0];
+          let s1 = slots1[slotIdx1];
+          
+          // Inject reporter blocks into the designated slots
+          let rb0 = new Block(rep0);
+          let rb1 = new Block(rep1);
+          rb0.parent = s0.block;
+          rb1.parent = s1.block;
+          
+          s0.block.args[s0.index] = rb0;
+          s1.block.args[s1.index] = rb1;
+      }
+  }
+
+  activeBlocks = [setup0, setup1];
+  window.workspaceBlocks = activeBlocks;
+  
+  correctIndex = floor(random(2));
+  renderBlocks = [cloneBlockTree(activeBlocks[correctIndex])];
+  
+  repositionBlock();
+}
+
+function generateRandomArgs(type) {
+  if (['background', 'fill', 'stroke'].includes(type)) {
+     return [floor(random(0,255)), floor(random(0,255)), floor(random(0,255))];
+  } else if (type === 'strokeWeight') {
+     return [floor(random(1, 40))];
+  } else if (type === 'textSize') {
+     return [floor(random(12, 72))];
+  } else if (type === 'circle') {
+     return [floor(random(20, width * 0.5)), floor(random(50, height * 0.3)), floor(random(20, width * 0.25))]; 
+  } else if (type === 'ellipse') {
+     return [floor(random(20, width * 0.5)), floor(random(50, height * 0.3)), floor(random(20, width * 0.25)), floor(random(20, width * 0.25))];
+  } else if (type === 'rect') {
+     return [floor(random(20, width * 0.5)), floor(random(20, height * 0.3)), floor(random(20, width * 0.25)), floor(random(20, width * 0.25))];
+  } else if (type === 'text') {
+     return ['Hello World', floor(random(20, width * 0.5)), floor(random(20, height * 0.3))];
+  } else if (type === 'line') {
+     return [floor(random(20, width * 0.5)), floor(random(20, height * 0.3)), floor(random(20, width * 0.5)), floor(random(20, height * 0.3))];
+  }
+  return [];
+}
+
+function generateDifferentArgs(type, baseArgs) {
+  let newArgs = [];
+  for (let i = 0; i < baseArgs.length; i++) {
+    let val = baseArgs[i];
+    
+    // Pass strings directly (e.g. text blocks' string argument)
+    if (typeof val !== 'number') {
+        newArgs.push(val);
+        continue;
+    }
+    
+    let diffRequirement = max(2, Math.abs(val * 0.25)); 
+    let newVal;
+    let attempts = 0;
+    
+    do {
+      if (['background', 'fill', 'stroke'].includes(type)) {
+        newVal = floor(random(0, 255));
+      } else if (type === 'strokeWeight') {
+        newVal = floor(random(1, 20));
+      } else if (type === 'textSize') {
+        newVal = floor(random(12, 72));
+      } else {
+        if (type === 'text') {
+           newVal = floor(random(20, width * 0.5));
+        } else if (type === 'line') {
+           if (i % 2 === 0) newVal = floor(random(20, width * 0.5));
+           else newVal = floor(random(20, height * 0.3));
+        } else {
+           if (i < 2) newVal = floor(random(50, width * 0.5));
+           else newVal = floor(random(20, height / 2));
+        }
+      }
+      attempts++;
+    } while (abs(newVal - val) < diffRequirement && attempts < 100);
+    
+    newArgs.push(newVal);
+  }
+  return newArgs;
+}
+
 function executeRenderTree(b, viewW, viewH) {
-  let a = b.args.map(v => {
+  // Evaluate arguments, mapping any reporter blocks to their current live values
+  let a = b.args.map((v, i) => {
+    // 1. Handle Reporter Blocks (mouseX, mouseY)
+    if (v instanceof Block) {
+        // Note: You may need to adjust the offsets (width / 3 and 100) 
+        // to match your exact left panel width and top panel height
+        if (v.type === 'mouseX') return mouseX - (width / 3);
+        if (v.type === 'mouseY') return mouseY - 100;
+        return 0;
+    }
+    
+    // 2. Handle Numbers
     if (typeof v === 'number') return v;
-    if (typeof v === 'string' && v.trim() === '') return undefined;
-    let parsed = parseFloat(v);
-    return isNaN(parsed) ? 0 : parsed;
+    
+    // 3. Handle Strings
+    if (typeof v === 'string') {
+        // Prevent parsing the text string of a 'text' block into a float
+        if (b.type === 'text' && i === 0) return v;
+        
+        if (v.trim() === '') return undefined;
+        let parsed = parseFloat(v);
+        return isNaN(parsed) ? v : parsed; 
+    }
+    
+    return v;
   });
 
   let type = b.type;
   
+  // Apply standard environment blocks
   if (type === 'background') {
-    push();
-    let val = b.args[0];
-    if (typeof val === 'string' && val.trim() !== "" && isNaN(Number(val))) {
-      fill(val);
-    } else {
-      let validArgs = a.filter(v => v !== undefined);
-fill(...validArgs);
-    }
-    noStroke();
-    rect(0, 0, viewW, viewH);
-    pop();
+      background(a[0] ?? 220, a[1] ?? 220, a[2] ?? 220);
   } else if (type === 'fill') {
-    let val = b.args[0];
-    if (typeof val === 'string' && val.trim() !== "" && isNaN(Number(val))) {
-      fill(val);
-    } else {
-      let validArgs = a.filter(v => v !== undefined);
-fill(...validArgs);
-    }
-    // Mark that a user-defined fill block has altered the global state
-    window.customFillApplied = true; 
+      fill(a[0] ?? 100, a[1] ?? 100, a[2] ?? 100);
+      window.customFillApplied = true;
   } else if (type === 'stroke') {
-    let val = b.args[0];
-    if (typeof val === 'string' && val.trim() !== "" && isNaN(Number(val))) {
-      stroke(val);
-    } else {
-      let validArgs = a.filter(v => v !== undefined);
-stroke(...validArgs);
-    }
+      stroke(a[0] ?? 0, a[1] ?? 0, a[2] ?? 0);
   } else if (type === 'strokeWeight') {
-    liveStrokeWeight = a[0];
-    strokeWeight(liveStrokeWeight);
-  } else if (type === 'rect') {
-    rectMode(CORNER);
-    rect(a[0], a[1], a[2], a[3]);
-  } else if (type === 'circle') {
-    circle(a[0], a[1], a[2]);
-  } else if (type === 'ellipse') {
-    ellipse(a[0], a[1], a[2], a[3]);
-  } else if (type === 'line') {
-    line(a[0], a[1], a[2], a[3]);
-  } else if (type === 'triangle') {
-    triangle(a[0], a[1], a[2], a[3], a[4], a[5]);
-  } else if (type === 'arc') {
-    angleMode(DEGREES);
-    arc(a[0], a[1], a[2], a[3], a[4], a[5]);
-  } else if (type === 'point') {
-    push();
-    strokeWeight(liveStrokeWeight);
-    point(a[0], a[1]);
-    pop();
+      let w = a[0] ?? 1;
+      strokeWeight(w);
+      liveStrokeWeight = w; // Track for block rendering accuracy
+  } else if (type === 'textSize') {
+      window.liveTextSize = a[0] ?? 16;
+      
+  // Apply shape blocks
   } else if (type === 'text') {
-    push();
-    // Check if a preceding custom fill block exists.
-    // If not, override the canvas baseline white (255) with black (0).
-    if (!window.customFillApplied) {
-      fill(0);
-    }
-    noStroke(); 
-    textSize(a[3] || 16);
-    textStyle(NORMAL);
-    textAlign(LEFT, TOP);
-    text(b.args[0] || '', a[1] ?? 20, a[2] ?? 20);
-    pop();
-  }
-
-  for (let child of b.children) {
-    executeRenderTree(child, viewW, viewH);
-  }
-  if (b.elseChildren) {
-    for (let child of b.elseChildren) {
-      executeRenderTree(child, viewW, viewH);
-    }
+      push();
+      // Default to black text if no fill was provided in the block tree
+      if (!window.customFillApplied) {
+        fill(0); 
+      }
+      noStroke(); // Text normally looks best without a stroke in p5
+      textSize(window.liveTextSize || 16);
+      textStyle(NORMAL);
+      textAlign(LEFT, TOP);
+      // a[0] holds the string, a[1] and a[2] hold the evaluated x and y coordinates
+      text(a[0] || 'Hello', a[1] ?? 20, a[2] ?? 20);
+      pop();
+  } else if (type === 'line') {
+      line(a[0] ?? 20, a[1] ?? 20, a[2] ?? 100, a[3] ?? 100);
+  } else if (type === 'circle') {
+      circle(a[0] ?? 50, a[1] ?? 50, a[2] ?? 50);
+  } else if (type === 'ellipse') {
+      ellipse(a[0] ?? 50, a[1] ?? 50, a[2] ?? 50, a[3] ?? 50);
+  } else if (type === 'rect') {
+      rect(a[0] ?? 20, a[1] ?? 20, a[2] ?? 50, a[3] ?? 50);
   }
 }
 
@@ -481,48 +587,7 @@ function drawWinScreen() {
   pop();
 }
 
-function generateRandomArgs(type) {
-  if (['background', 'fill', 'stroke'].includes(type)) {
-     return [floor(random(0,255)), floor(random(0,255)), floor(random(0,255))];
-  } else if (type === 'strokeWeight') {
-     return [floor(random(0, 40))];
-  } else if (type === 'circle') {
-     return [floor(random(20, width * 0.5)), floor(random(50, height * 0.3)), floor(random(20, width * 0.25))]; // x, y, radius
-  } else if (type === 'ellipse') {
-     return [floor(random(20, width * 0.5)), floor(random(50, height * 0.3)), floor(random(20, width * 0.25)), floor(random(20, width * 0.25))]; // x, y, w, h
-  } else if (type === 'rect') {
-     return [floor(random(20, width * 0.5)), floor(random(20, height * 0.3)), floor(random(20, width * 0.25)), floor(random(20, width * 0.25))]; // x, y, w, h
-  }
-  return [];
-}
 
-function generateDifferentArgs(type, baseArgs) {
-  let newArgs = [];
-  for (let i = 0; i < baseArgs.length; i++) {
-    let val = baseArgs[i];
-    let diffRequirement = max(2, Math.abs(val * 0.25)); // Must be at least 25% different
-    
-    let newVal;
-    let attempts = 0;
-    do {
-      if (['background', 'fill', 'stroke'].includes(type)) {
-        newVal = floor(random(0, 255));
-      } else if (type === 'strokeWeight') {
-        newVal = floor(random(1, 20));
-      } else {
-        if (i < 2) { // x, y coordinates
-           newVal = floor(random(50, width * 0.5));
-        } else { // width, height, or radius
-           newVal = floor(random(20, height / 2));
-        }
-      }
-      attempts++;
-    } while (abs(newVal - val) < diffRequirement && attempts < 100);
-    
-    newArgs.push(newVal);
-  }
-  return newArgs;
-}
 
 class Block {
   constructor(type, x = 0, y = 0) {
@@ -1428,3 +1493,54 @@ getMenuOptions() {
       'text': ['string', 'x', 'y'],
       'map': ['value', 'low', 'high', 'low', 'high'],
       'dist': ['x1', 'y1', 'x2', 'y2'],
+      'arc': ['x', 'y', 'w', 'h', 'start', 'stop'],
+      'textSize': ['pixels'],
+      'strokeWeight': ['pixels'],
+      'remainder': ['dividend', 'divisor'],
+      'translate': ['x', 'y'],
+      'rotate': ['degrees'],
+      'image': ['file', 'x', 'y', 'w', 'h'],
+		'atan2': ['y', 'x']
+    };
+
+    if (['fill', 'stroke', 'background', 'tint'].includes(type)) {
+      this.updateColorHints();
+    } else {
+      this.argHints = hints[type] || [];
+    }
+  }
+
+  updateColorHints() {
+    if (!['fill', 'stroke', 'background', 'tint'].includes(this.type)) return;
+
+    const findModeBefore = (targetBlock) => {
+      let p = targetBlock.parent;
+      if (!p) return 'RGB'; 
+
+      let list = (p.elseChildren && p.elseChildren.includes(targetBlock)) 
+                 ? p.elseChildren 
+                 : p.children;
+
+      let myIndex = list.indexOf(targetBlock);
+      let lastFoundInScope = null;
+
+      for (let i = 0; i < myIndex; i++) {
+        if (list[i].type === 'colorMode') {
+          lastFoundInScope = list[i].args[0];
+        }
+      }
+
+      if (lastFoundInScope) return lastFoundInScope;
+
+      return findModeBefore(p);
+    };
+
+    const mode = findModeBefore(this);
+
+    if (mode === 'HSB') {
+      this.argHints = ['H', 'S', 'B', 'alpha'];
+    } else {
+      this.argHints = ['R', 'G', 'B', 'alpha'];
+    }
+  }
+}
