@@ -1,6 +1,3 @@
-// ==========================================
-// 1. GLOBAL DEPENDENCIES & SLOT EDIT STATES
-// ==========================================
 const UI = {
   ts: 14,   // Text size
   sf: 1.5,  // Scale factor (1.5x scaled up)
@@ -24,191 +21,7 @@ let editingSlot = null;
 // Execution state tracking for deferred live rendering
 let renderBlocks = []; 
 
-// Global store for tracking current prompts with validation targets
-let currentPrompts = [];
-
-// Dictionary mapping block types to their corresponding prompt strings
-const PROMPT_DICTIONARY = {
-  'rect': [
-    'Make the rectangle width smaller',
-    'Make the rectangle width larger',
-    'Make the rectangle height smaller',
-    'Make the rectangle height larger',
-    'Make the rectangle width = value',
-    'Make the rectangle height = value',
-    'Make the rectangle into a perfect square',
-    'Move the rectangle to the bottom of the canvas',
-    'Move the rectangle to the right side of the canvas ➡️',
-    'Make the rectangle x position = value',
-    'Make the rectangle y position = value',
-    'Move the rectangle off the canvas'
-  ],
-  'circle': [
-    'Make the circle diameter smaller',
-    'Make the circle diameter larger',
-    'Make the circle diameter = value',
-    'Move the circle to the bottom of the canvas',
-    'Move the circle to the right side of the canvas ➡️',
-    'Make the circle x position = value',
-    'Make the circle y position = value',
-    'Move the circle off the canvas'
-  ],
-  'ellipse': [
-    'Make the ellipse width smaller',
-    'Make the ellipse width larger',
-    'Make the ellipse height smaller',
-    'Make the ellipse height larger',
-    'Make the ellipse width = value',
-    'Make the ellipse height = value',
-    'Make the ellipse into a perfect circle',
-    'Move the ellipse to the bottom of the canvas',
-    'Move the ellipse to the right side of the canvas ➡️',
-    'Make the ellipse x position = value',
-    'Make the ellipse y position = value',
-    'Move the ellipse off the canvas'
-  ],
-	/*
-  'line': [
-    'Make the line horizontal (left-to-right)',
-    'Make the line vertical (up-to-down)',
-    'Make the line shorter',
-    'Make the line longer',
-    'Make the line start in the bottom corner of the canvas',
-    'Make the line end on the bottom corner of the canvas',
-    'Make the line go diagonal all the way from one corner to the other',
-    'Move the line off the canvas'
-  ],
-  
-  'triangle': [
-    'Make the x1 position = value',
-    'Make the x2 position = value',
-    'Make the x3 position = value',
-    'Make the y1 position = value',
-    'Make the y2 position = value',
-    'Make the y3 position = value'
-  ],
-  'arc': [
-    'Make the arc form a full circle',
-    'Make the arc wider',
-    'Make the arc taller',
-    'Move the arc to the right ➡️',
-    'Move the arc to the left ⬅️',
-    'Move the arc up',
-    'Move the arc down',
-    'Make the arc x position = value',
-    'Make the arc y position = value',
-    'Make the arc width = value',
-    'Make the arc height = value',
-    'Make the arc curve up instead of down',
-    'Move the arc so it is off the canvas'
-  ],
-	
-  'point': [
-    'Move the point to the left ⬅️',
-    'Move the point to the right ➡️',
-    'Move the point up',
-    'Move the point down',
-    'Move the point so it is off the canvas',
-    'Make the x position of the point = value',
-    'Make the y position of the point = value'
-  ],
-  */
-  'text': [
-    'Make the text say your name',
-    'Move the text to the left ⬅️',
-    'Move the text to the right ➡️',
-    'Move the text up',
-    'Move the text down',
-    'Move the text so it is off the canvas',
-    'Make the x position of the text = value',
-    'Make the y position of the text = value'
-  ],
-  'background': [
-    'Make the background red',
-    'Make the background green',
-    'Make the background blue',
-    'Make the background grey',
-    'Make the background black',
-    'Make the background dark red',
-    'Make the background dark blue',
-    'Make the background dark green',
-    'Make the Red of the background = value',
-    'Make the Green of the background = value',
-    'Make the Blue of the background = value'
-  ],
-  'fill': [
-    'Fill the shape with red',
-    'Fill the shape with green',
-    'Fill the shape with blue',
-    'Fill the shape with grey',
-    'Fill the shape with black',
-    'Fill the shape with dark red',
-    'Fill the shape with dark blue',
-    'Fill the shape with dark green',
-    'Make the Red of the fill = value',
-    'Make the Green of the fill = value',
-    'Make the Blue of the fill = value'
-  ],
-  'stroke': [
-    'Outline the shape with red',
-    'Outline the shape with green',
-    'Outline the shape with blue',
-    'Outline the shape with grey',
-    'Outline the shape with dark red',
-    'Outline the shape with dark blue',
-    'Outline the shape with dark green',
-    'Make the Green of the outline = value',
-    'Make Blue of the outline = value',
-    'Make the Red of the outline = value'
-  ],
-  'strokeWeight': [
-    'Make the outline thinner',
-    'Make the outline thicker',
-    'Make the strokeWeight = weightValue',
-    'Make the strokeWeight = 1'
-  ]
-};
-
-// ==========================================
-// 2. PROGRAM STATE & CONFIGURATIONS
-// ==========================================
 const blockSetups = [
-  // --- 1. BASE CONFIGURATIONS ---
-  { name: 'setup + rect', children: ['rect'] },
-  { name: 'setup + circle', children: ['circle'] },
-  { name: 'setup + ellipse', children: ['ellipse'] },
-//  { name: 'setup + line', children: ['line'] },
-//  { name: 'setup + triangle', children: ['triangle'] },
- // { name: 'setup + arc', children: ['arc'] },
- // { name: 'setup + point', children: ['point'] },
-  { name: 'setup + text', children: ['text'] },
-  { name: 'setup + background', children: ['background'] },
-
-  // --- 2. FILL ONLY CONFIGURATIONS ---
-  { name: 'setup + fill + circle', children: ['fill', 'circle'] },
-  { name: 'setup + fill + ellipse', children: ['fill', 'ellipse'] },
-  { name: 'setup + fill + rect', children: ['fill', 'rect'] },
-  { name: 'setup + fill + text', children: ['fill', 'text'] },
-
-  // --- 3. STROKEWEIGHT ONLY CONFIGURATIONS ---
-  { name: 'setup + strokeWeight + rect', children: ['strokeWeight', 'rect'] },
-  { name: 'setup + strokeWeight + circle', children: ['strokeWeight', 'circle'] },
-  { name: 'setup + strokeWeight + ellipse', children: ['strokeWeight', 'ellipse'] },
- // { name: 'setup + strokeWeight + line', children: ['strokeWeight', 'line'] },
- // { name: 'setup + strokeWeight + triangle', children: ['strokeWeight', 'triangle'] },
- // { name: 'setup + strokeWeight + arc', children: ['strokeWeight', 'arc'] },
-//  { name: 'setup + strokeWeight + point', children: ['strokeWeight', 'point'] },
-
-  // --- 4. STROKE ONLY CONFIGURATIONS ---
-  { name: 'setup + stroke + rect', children: ['stroke', 'rect'] },
-  { name: 'setup + stroke + circle', children: ['stroke', 'circle'] },
-  { name: 'setup + stroke + ellipse', children: ['stroke', 'ellipse'] },
- // { name: 'setup + stroke + line', children: ['stroke', 'line'] },
-//  { name: 'setup + stroke + triangle', children: ['stroke', 'triangle'] },
- // { name: 'setup + stroke + arc', children: ['stroke', 'arc'] },
- // { name: 'setup + stroke + point', children: ['stroke', 'point'] },
-
-  // --- 5. COMBINED STYLE ATTRIBUTES CONFIGURATIONS (strokeWeight + stroke + fill) ---
   { name: 'setup + styles + rect', children: ['strokeWeight', 'stroke', 'fill', 'rect'] },
   { name: 'setup + styles + circle', children: ['strokeWeight', 'stroke', 'fill', 'circle'] },
   { name: 'setup + styles + ellipse', children: ['strokeWeight', 'stroke', 'fill', 'ellipse'] },
@@ -219,7 +32,6 @@ const blockSetups = [
 let currentSetupIndex = 0;
 let activeBlocks = [];
 let liveStrokeWeight = 1;
-let rightPanelT, rightPanelH,  leftPanelW;
 let currentLevel = 1
 let pointIcon, textIcon, lineIcon, rectangleIcon, triangleIcon, ellipseIcon, circleIcon, arcIcon;
 let gameState = 'PLAY'
@@ -263,48 +75,17 @@ if (typeof gameState !== 'undefined' && gameState === 'WIN') {
   noStroke();
   rect(leftPanelW, 0, width - leftPanelW, rightPanelT);
 
-  // Render Green 'RUN' Button
   let btnX = leftPanelW + 20;
   let btnY = rightPanelT - 80;
   let btnW = 110;
   let btnH = 40;
 
-  if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH) {
-    fill('#388E3C'); 
-  } else {
-    fill('#4CAF50'); 
-  }
-  noStroke();
-  rect(btnX, btnY, btnW, btnH, UI.rad);
-
-  fill('#ffffff');
   textSize(14);
   textStyle(BOLD);
-  textAlign(CENTER, CENTER);
-  text("RUN", btnX + btnW / 2, btnY + btnH / 2);
 fill(0)
 	textAlign(LEFT)
 	text('mouseX: ' + round(mouseX - leftPanelW) + '   mouseY: ' + round(mouseY - (height - rightPanelH)), btnX, btnY + btnH * 1.2)
-  // ------------------------------------------
-  // DRAW LEFT PANEL (1/3 Width Control Sidebar)
-  // ------------------------------------------
-  fill('#ffeedd');
-  noStroke();
-  rect(0, 0, leftPanelW, height);
-  
-  stroke('#e4e7ed');
-  strokeWeight(2);
-  line(leftPanelW, 0, leftPanelW, height);
 
-	fill('#707379');
-  textSize(24);
-  textStyle(NORMAL);
-  text("Level " + currentLevel, leftPanelW / 2, 30);
-  
-  fill('#909399');
-  textSize(12);
-  textStyle(NORMAL);
-  text("Complete all challenges to unlock the next level", leftPanelW / 2, 60);
   
   // Render full nested container block trees
   for (let b of activeBlocks) {
@@ -321,104 +102,12 @@ fill(0)
   if (blocksBottom === 0) blocksBottom = height / 2 + 60;
 
 // Render Interactive Performance Task Validation Elements
-  let promptY = blocksBottom + 40;
-  push();
-  fill('#2c3e50');
-  textSize(20);
-  textStyle(BOLD);
-  textAlign(LEFT, TOP);
-  text("CHALLENGE PROMPTS:", 20, promptY);
-  
-  // Define bounding box properties for the speaker button icon at the end of the line
-  let speakerX = 20 + textWidth("CHALLENGE PROMPTS:") + 10;
-  let speakerW = 22;
-  let speakerH = 20;
-  
-  // Highlight the speaker button on mouse hover
-  if (mouseX >= speakerX && mouseX <= speakerX + speakerW && mouseY >= promptY - 2 && mouseY <= promptY - 2 + speakerH) {
-    fill('#2196F3'); // Subtle blue tint on hover
-  } else {
-    fill('#5a6c7d'); // Default descriptive gray/slate
-  }
-  textSize(24);
-  text("🔊", speakerX, promptY - 2);
-  pop();
-	
-  promptY += 25;
-  let allSatisfied = currentPrompts.length > 0;
-  
-  for (let p of currentPrompts) {
-    let isSatisfied = evaluatePromptSatisfaction(p);
-    if (!isSatisfied) {
-      allSatisfied = false;
-    }
-    
-    push();
-    if (isSatisfied) {
-      // Draw standard green check box base indicator
-      fill('#4CAF50');
-      noStroke();
-      rect(20, promptY + 1, 14, 14, 3);
-      
-      // Draw check line vectors inside box indicator
-      stroke(255);
-      strokeWeight(2);
-      line(23, promptY + 8, 26, yOffsetForCheck(promptY, 11));
-      line(26, yOffsetForCheck(promptY, 11), 31, promptY + 4);
-      
-      fill('#2e7d32');
-      textStyle(BOLD);
-    } else {
-      // Draw incomplete gray challenge state layout container box
-      stroke('#a6b9cb');
-      strokeWeight(1.5);
-      noFill();
-      rect(20, promptY + 1, 14, 14, 3);
-      
-      fill('#5a6c7d');
-      textStyle(NORMAL);
-    }
-    push()
-	  textAlign(LEFT, TOP)
-    noStroke();
-    textSize(16);
-    text(p.promptText, 42, promptY + 3, leftPanelW - 60);
-    pop();
-      pop();
-
-    promptY += 32; 
-  }
 
   // Draw Onscreen Progression Graphical Button
   let nextBtnX = 20;
   let nextBtnY = promptY + 15;
   let nextBtnW = leftPanelW - 40;
   let nextBtnH = 40;
-
-  push();
-  if (allSatisfied) {
-    if (mouseX >= nextBtnX && mouseX <= nextBtnX + nextBtnW && mouseY >= nextBtnY && mouseY <= nextBtnY + nextBtnH) {
-      fill('#1976D2'); // Hover state
-    } else {
-      fill('#2196F3'); // Active state
-    }
-  } else {
-    fill('#e4e7ed'); // Disabled state
-  }
-  noStroke();
-  rect(nextBtnX, nextBtnY, nextBtnW, nextBtnH, UI.rad);
-
-  if (allSatisfied) {
-    fill('#ffffff');
-    textStyle(BOLD);
-  } else {
-    fill('#a8abb2');
-    textStyle(NORMAL);
-  }
-  textSize(13);
-  textAlign(CENTER, CENTER);
-  text(allSatisfied ? "ADVANCE TO NEXT LEVEL →" : "LEVEL LOCKED (Complete Challenges)", nextBtnX + nextBtnW / 2, nextBtnY + nextBtnH / 2);
-  pop();
 
 if (keyIsDown(71)) { 
   push();
@@ -483,11 +172,8 @@ if (keyIsDown(71)) {
 }
 textAlign(RIGHT)
 	text('hold G key to view grid', leftPanelW - 10, height - 20)
-	
-  drawEditingSlotIndicator();
 }
 
-// Inline helper utility to lock check mark vertical lines inside target container layout boxes
 function yOffsetForCheck(baseY, offset) {
   return baseY + offset;
 }
@@ -495,183 +181,6 @@ function yOffsetForCheck(baseY, offset) {
 // ==========================================
 // 3. TASK COMPLETION CONDITION VALIDATOR
 // ==========================================
-function evaluatePromptSatisfaction(p) {
-  let targetBlock = null;
-  // Look at the compiled execution snapshot instead of the live workspace
-  for (let b of renderBlocks) { 
-    targetBlock = searchBlockTreeByType(b, p.blockType);
-    if (targetBlock) break;
-  }
-  if (!targetBlock) return false;
-
-  // Clean raw or numeric string inputs down to standardized floating arithmetic values
-  let c = targetBlock.args.map(v => {
-    if (typeof v === 'number') return v;
-    if (typeof v === 'string' && v.trim() === '') return 0;
-    let parsed = parseFloat(v);
-    return isNaN(parsed) ? 0 : parsed;
-  });
-  
-  let d = p.defaults;
-  let val = p.randomValue;
-  let raw = p.originalPrompt;
-
-  let rightPanelW = width - leftPanelW;
-  let rightPanelH = height - rightPanelT;
-
-  switch(p.blockType) {
-    case 'rect':
-      if (raw === 'Make the rectangle width smaller') return c[2] < d[2];
-      if (raw === 'Make the rectangle width larger') return c[2] > d[2];
-      if (raw === 'Make the rectangle height smaller') return c[3] < d[3];
-      if (raw === 'Make the rectangle height larger') return c[3] > d[3];
-      if (raw === 'Make the rectangle width = value') return c[2] === val;
-      if (raw === 'Make the rectangle height = value') return c[3] === val;
-      if (raw === 'Make the rectangle into a perfect square') return c[2] === c[3] && c[2] !== 0;
-      if (raw === 'Move the rectangle to the bottom of the canvas') return c[1] > rightPanelH * 0.5;
-      if (raw === 'Move the rectangle to the right side of the canvas ➡️') return c[0] > rightPanelW * 0.5;
-      if (raw === 'Make the rectangle x position = value') return c[0] === val;
-      if (raw === 'Make the rectangle y position = value') return c[1] === val;
-      if (raw === 'Move the rectangle off the canvas') {
-        return c[0] < -c[2] || c[0] > rightPanelW || c[1] < -c[3] || c[1] > rightPanelH;
-      }
-      break;
-
-    case 'circle':
-      if (raw === 'Make the circle diameter smaller') return c[2] < d[2];
-      if (raw === 'Make the circle diameter larger') return c[2] > d[2];
-      if (raw === 'Make the circle diameter = value') return c[2] === val;
-      if (raw.includes('Move the circle') && raw.includes('bottom of the canvas')) return c[1] > rightPanelH * 0.5;
-      if (raw === 'Move the circle to the right side of the canvas ➡️') return c[0] > rightPanelW * 0.5;
-      if (raw === 'Make the circle x position = value') return c[0] === val;
-      if (raw === 'Make the circle y position = value') return c[1] === val;
-      if (raw === 'Move the circle off the canvas') {
-        return c[0] < -c[2] || c[0] > rightPanelW || c[1] < -c[2] || c[1] > rightPanelH;
-      }
-      break;
-
-    case 'ellipse':
-      if (raw === 'Make the ellipse width smaller') return c[2] < d[2];
-      if (raw === 'Make the ellipse width larger') return c[2] > d[2];
-      if (raw === 'Make the ellipse height smaller') return c[3] < d[3];
-      if (raw === 'Make the ellipse height larger') return c[3] > d[3];
-      if (raw === 'Make the ellipse width = value') return c[2] === val;
-      if (raw === 'Make the ellipse height = value') return c[3] === val;
-      if (raw === 'Make the ellipse into a perfect circle') return c[2] === c[3] && c[2] !== 0;
-      if (raw === 'Move the ellipse to the bottom of the canvas') return c[1] > rightPanelH * 0.5;
-      if (raw === 'Move the ellipse to the right side of the canvas ➡️') return c[0] > rightPanelW * 0.5;
-      if (raw === 'Make the ellipse x position = value') return c[0] === val;
-      if (raw === 'Make the ellipse y position = value') return c[1] === val;
-      if (raw === 'Move the ellipse off the canvas') {
-        return c[0] < -c[2] || c[0] > rightPanelW || c[1] < -c[3] || c[1] > rightPanelH;
-      }
-      break;
-
-    case 'line':
-      if (raw === 'Make the line horizontal (left-to-right)') return c[1] === c[3];
-      if (raw === 'Make the line vertical (up-to-down)') return c[0] === c[2];
-      if (raw === 'Make the line shorter') return dist(c[0], c[1], c[2], c[3]) < dist(d[0], d[1], d[2], d[3]);
-      if (raw === 'Make the line longer') return dist(c[0], c[1], c[2], c[3]) > dist(d[0], d[1], d[2], d[3]);
-      if (raw === 'Make the line start in the bottom corner of the canvas') return c[1] > rightPanelH * 0.67 || c[3] > rightPanelH * 0.67;
-      if (raw === 'Make the line end on the bottom corner of the canvas') {
-        return (c[0] <= 60 && c[1] >= rightPanelH - 60) || (c[2] <= 60 && c[3] >= rightPanelH - 60) ||
-               (c[0] >= rightPanelW - 60 && c[1] >= rightPanelH - 60) || (c[2] >= rightPanelW - 60 && c[3] >= rightPanelH - 60);
-      }
-      if (raw === 'Make the line go diagonal all the way from one corner to the other') {
-        let d1 = (dist(c[0], c[1], 0, 0) < 60 && dist(c[2], c[3], rightPanelW, rightPanelH) < 60) ||
-                 (dist(c[2], c[3], 0, 0) < 60 && dist(c[0], c[1], rightPanelW, rightPanelH) < 60);
-        let d2 = (dist(c[0], c[1], rightPanelW, 0) < 60 && dist(c[2], c[3], 0, rightPanelH) < 60) ||
-                 (dist(c[2], c[3], rightPanelW, 0) < 60 && dist(c[0], c[1], 0, rightPanelH) < 60);
-        return d1 || d2;
-      }
-      if (raw === 'Move the line off the canvas') {
-        return (c[0] < 0 && c[2] < 0) || (c[0] > rightPanelW && c[2] > rightPanelW) ||
-               (c[1] < 0 && c[3] < 0) || (c[1] > rightPanelH && c[3] > rightPanelH);
-      }
-      break;
-
-    case 'triangle':
-      if (raw === 'Make the x1 position = value') return c[0] === val;
-      if (raw === 'Make the x2 position = value') return c[2] === val;
-      if (raw === 'Make the x3 position = value') return c[4] === val;
-      if (raw === 'Make the y1 position = value') return c[1] === val;
-      if (raw === 'Make the y2 position = value') return c[3] === val;
-      if (raw === 'Make the y3 position = value') return c[5] === val;
-      break;
-
-    case 'arc':
-      if (raw === 'Make the arc form a full circle') return abs(c[5] - c[4]) >= 360;
-      if (raw === 'Make the arc wider') return c[2] > d[2];
-      if (raw === 'Make the arc taller') return c[3] > d[3];
-      if (raw === 'Move the arc to the right ➡️') return c[0] > d[0];
-      if (raw === 'Move the arc to the left ⬅️') return c[0] < d[0];
-      if (raw === 'Move the arc up') return c[1] < d[1];
-      if (raw === 'Move the arc down') return c[1] > d[1];
-      if (raw === 'Make the arc x position = value') return c[0] === val;
-      if (raw === 'Make the arc y position = value') return c[1] === val;
-      if (raw === 'Make the arc width = value') return c[2] === val;
-      if (raw === 'Make the arc height = value') return c[3] === val;
-      if (raw === 'Make the arc curve up instead of down') return c[4] >= 180 && c[5] <= 360;
-      if (raw === 'Move the arc so it is off the canvas') {
-        return c[0] < -c[2] || c[0] > rightPanelW || c[1] < -c[3] || c[1] > rightPanelH;
-      }
-      break;
-
-    case 'point':
-      if (raw === 'Move the point to the left ⬅️') return c[0] < d[0];
-      if (raw === 'Move the point to the right ➡️') return c[0] > d[0];
-      if (raw === 'Move the point up') return c[1] < d[1];
-      if (raw === 'Move the point down') return c[1] > d[1];
-      if (raw === 'Move the point so it is off the canvas') {
-        return c[0] < 0 || c[0] > rightPanelW || c[1] < 0 || c[1] > rightPanelH;
-      }
-      if (raw === 'Make the x position of the point = value') return c[0] === val;
-      if (raw === 'Make the y position of the point = value') return c[1] === val;
-      break;
-
-    case 'text':
-      let activeTextStr = String(targetBlock.args[0] || '');
-      let baseTextStr = String(d[0] || '');
-      if (raw === 'Make the text say your name') return activeTextStr.trim() !== '' && activeTextStr !== baseTextStr;
-      if (raw === 'Move the text to the left ⬅️') return c[1] < d[1];
-      if (raw === 'Move the text to the right ➡️') return c[1] > d[1];
-      if (raw === 'Move the text up') return c[2] < d[2];
-      if (raw === 'Move the text down') return c[2] > d[2];
-      if (raw === 'Move the text so it is off the canvas') {
-        return c[1] < -100 || c[1] > rightPanelW || c[2] < -40 || c[2] > rightPanelH;
-      }
-      if (raw === 'Make the x position of the text = value') return c[1] === val;
-      if (raw === 'Make the y position of the text = value') return c[2] === val;
-      break;
-
-    case 'background':
-    case 'fill':
-    case 'stroke':
-      let rVal = c[0], gVal = c[1] ?? rVal, bVal = c[2] ?? rVal;
-      if (raw.includes('with red') || raw.includes('background red') || raw.includes('with red')) return gVal < 64 && bVal < 64 && rVal > 64;
-      if (raw.includes('with green') || raw.includes('background green') || raw.includes('with green')) return bVal < 64 && rVal < 64 && gVal > 64;
-      if (raw.includes('with blue') || raw.includes('background blue') || raw.includes('with blue')) return bVal > 64 && gVal < 64 && rVal < 64;
-      if (raw.includes('with grey') || raw.includes('background grey') || raw.includes('with grey')) {
-        return abs(rVal - gVal) <= 24 && abs(gVal - bVal) <= 24 && abs(rVal - bVal) <= 24 && rVal >= 50 && rVal <= 200;
-      }
-      if (raw.includes('with black') || raw.includes('background black') || raw.includes('with black')) return rVal === 0 && gVal === 0 && bVal === 0;
-      if (raw.includes('with dark red') || raw.includes('background dark red') || raw.includes('with dark red')) return rVal < 190 && rVal > 50 && gVal < 25 && bVal < 25;
-      if (raw.includes('with dark blue') || raw.includes('background dark blue') || raw.includes('with dark blue')) return bVal < 190 && bVal > 50 && gVal < 25 && rVal < 25;
-      if (raw.includes('with dark green') || raw.includes('background dark green') || raw.includes('with dark green')) return gVal < 190 && gVal > 50 && rVal < 25 && bVal < 25;
-      if (raw.includes('Red of the')) return rVal === val;
-      if (raw.includes('Green of the')) return gVal === val;
-      if (raw.includes('Blue of the') || raw.includes('Make Blue of')) return bVal === val;
-      break;
-
-    case 'strokeWeight':
-      if (raw === 'Make the outline thinner') return c[0] < d[0];
-      if (raw === 'Make the outline thicker') return c[0] > d[0];
-      if (raw.includes('strokeWeight =') && (raw.includes('value') || raw.includes('weightValue'))) return c[0] === val;
-      if (raw === 'Make the strokeWeight = 0') return c[0] === 0;
-      break;
-  }
-  return false;
-}
 
 function searchBlockTreeByType(b, type) {
   if (b.type === type) return b;
@@ -688,43 +197,6 @@ function searchBlockTreeByType(b, type) {
     }
   }
   return null;
-}
-
-// ==========================================
-// 4. INTERACTION & INPUT HANDLING
-// ==========================================
-function keyPressed() {
-  if (editingSlot) {
-    if (keyCode === ENTER || keyCode === ESCAPE) {
-      let finalVal = editingSlot.block.args[editingSlot.index];
-      if (finalVal !== "" && !isNaN(Number(finalVal))) {
-        editingSlot.block.args[editingSlot.index] = Number(finalVal);
-      }
-      editingSlot = null;
-      repositionBlock();
-    } else if (keyCode === BACKSPACE) {
-      let currentStr = String(editingSlot.block.args[editingSlot.index]);
-      editingSlot.block.args[editingSlot.index] = currentStr.slice(0, -1);
-      repositionBlock();
-    }
-    return;
-  }
-  // Left/Right arrow key tracking blocks removed to completely restrict advancement to challenge parameters
-}
-
-function keyTyped() {
-  if (editingSlot) {
-    if (keyCode !== ENTER && keyCode !== ESCAPE && keyCode !== BACKSPACE) {
-      let currentStr = String(editingSlot.block.args[editingSlot.index]);
-      if (editingSlot.isHighlighted) {
-        currentStr = "";
-        editingSlot.isHighlighted = false;
-      }
-      editingSlot.block.args[editingSlot.index] = currentStr + key;
-      repositionBlock();
-    }
-    return false; 
-  }
 }
 
 function mousePressed() {
@@ -759,21 +231,6 @@ if (mouseX >= nextBtnX && mouseX <= nextBtnX + nextBtnW && mouseY >= nextBtnY &&
       checkAllSatisfied = false;
     }
   }
-  
-  if (checkAllSatisfied) {
-    editingSlot = null; 
-    
-    // --- WIN CONDITION CHECK ---
-    if (currentSetupIndex === blockSetups.length - 1) {
-      gameState = 'WIN'; // Transition to win state
-    } else {
-      // Otherwise, advance to the next level safely
-      currentSetupIndex++;
-      selectSetup(currentSetupIndex);
-      currentLevel++;
-    }
-    return;
-  }
 }
 
 	// Recalculate promptY base coordinate exactly like the layout engine does
@@ -785,109 +242,12 @@ for (let b of activeBlocks) {
 }
 if (blocksBottom === 0) blocksBottom = height / 2 + 60;
 promptY = blocksBottom + 40;
-
-// Calculate the same boundary box for the speaker icon
-push();
-textSize(20); // <-- FIXED: Changed from 14 to 20 to match the rendering scale
-textStyle(BOLD);
-let speakerX = 20 + textWidth("CHALLENGE PROMPTS:") + 10;
-let speakerW = 22;
-let speakerH = 20;
-pop();
-
-// Check if mouse clicked directly on the speaker icon box
-if (mouseX >= speakerX && mouseX <= speakerX + speakerW && mouseY >= promptY - 2 && mouseY <= promptY - 2 + speakerH) {
-
-  // Stop any speech currently playing to avoid overlap
-  window.speechSynthesis.cancel();
-
-  if (currentPrompts && currentPrompts.length > 0) {
-    // Build a complete readable text string out of all active prompts
-    let textToSpeak = " ";
-    for (let i = 0; i < currentPrompts.length; i++) {
-      textToSpeak += currentPrompts[i].promptText;
-      if (i < currentPrompts.length - 1) {
-        textToSpeak += ", and "; // Natural reading separation
-      }
-    }
-
-    // Initialize and trigger the web synthesis voice engine utterance
-    let utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = 1.0; // Normal conversational rate speed
-    utterance.pitch = 1.0; // Default natural pitch structure
-    window.speechSynthesis.speak(utterance);
-  }
-  return; // Break execution out of the click check chain
-}
-
-  if (mouseX < leftPanelW) {
-    editingSlot = null;
-    for (let b of activeBlocks) {
-      if (b.checkClick && b.checkClick(mouseX, mouseY)) {
-        repositionBlock();
-        return;
-      }
-      if (findSlotAtMouse(b, mouseX, mouseY)) {
-        return;
-      }
-    }
-  } else {
-    editingSlot = null;
-  }
-}
-
-function findSlotAtMouse(block, mx, my) {
-  for (let i = 0; i < block.args.length; i++) {
-    let pos = block.argPos[i];
-    if (pos && mx >= pos.x && mx <= pos.x + pos.w && my >= pos.y && my <= pos.y + pos.h) {
-      editingSlot = {
-        block: block,
-        index: i,
-        originalValue: block.args[i],
-        isHighlighted: true
-      };
-      return true;
-    }
-  }
-
-  for (let child of block.children) {
-    if (findSlotAtMouse(child, mx, my)) return true;
-  }
-  if (block.elseChildren) {
-    for (let child of block.elseChildren) {
-      if (findSlotAtMouse(child, mx, my)) return true;
-    }
-  }
-  return false;
 }
 
 function triggerGlobalLayoutRefresh() {
   repositionBlock();
 }
 
-function drawEditingSlotIndicator() {
-  if (!editingSlot) return;
-  
-  let pos = editingSlot.block.argPos[editingSlot.index];
-  if (!pos) return;
-
-  push();
-  stroke('#FF9800'); 
-  strokeWeight(2);
-  noFill();
-  rect(pos.x, pos.y, pos.w, pos.h, UI.rad);
-
-  if (editingSlot.isHighlighted) {
-    fill('rgba(0, 120, 215, 0.25)'); 
-    noStroke();
-    rect(pos.x + 2, pos.y + 2, pos.w - 4, pos.h - 4, UI.rad - 2);
-  }
-  pop();
-}
-
-// ==========================================
-// 5. HELPER LAYOUT UTILITIES
-// ==========================================
 function selectSetup(index) {
   currentSetupIndex = index; // cite: 2
   let setupData = blockSetups[index]; // cite: 3
@@ -919,9 +279,6 @@ function selectSetup(index) {
       let selectedPrompt = random(stringPool); // cite: 12
       let modifiedText = selectedPrompt; // cite: 15
 
-      // -------------------------------------------------------------
-      // DYNAMIC RANGE EVALUATION FOR randVal BASED ON PROMPT KEYWORDS
-      // -------------------------------------------------------------
       let lowerPrompt = selectedPrompt.toLowerCase();
       let randVal = 0;
 
@@ -1075,7 +432,8 @@ function executeRenderTree(b, viewW, viewH) {
     if (typeof val === 'string' && val.trim() !== "" && isNaN(Number(val))) {
       fill(val);
     } else {
-      fill(a[0], a[1] ?? a[0], a[2] ?? a[0]);
+      let validArgs = a.filter(v => v !== undefined);
+fill(...validArgs);
     }
     noStroke();
     rect(0, 0, viewW, viewH);
@@ -1085,7 +443,8 @@ function executeRenderTree(b, viewW, viewH) {
     if (typeof val === 'string' && val.trim() !== "" && isNaN(Number(val))) {
       fill(val);
     } else {
-      fill(a[0], a[1] ?? a[0], a[2] ?? a[0]);
+      let validArgs = a.filter(v => v !== undefined);
+fill(...validArgs);
     }
     // Mark that a user-defined fill block has altered the global state
     window.customFillApplied = true; 
@@ -1094,7 +453,8 @@ function executeRenderTree(b, viewW, viewH) {
     if (typeof val === 'string' && val.trim() !== "" && isNaN(Number(val))) {
       stroke(val);
     } else {
-      stroke(a[0], a[1] ?? a[0], a[2] ?? a[0]);
+      let validArgs = a.filter(v => v !== undefined);
+stroke(...validArgs);
     }
   } else if (type === 'strokeWeight') {
     liveStrokeWeight = a[0];
