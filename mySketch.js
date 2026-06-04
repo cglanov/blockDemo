@@ -200,151 +200,66 @@ function searchBlockTreeByType(b, type) {
 }
 
 function mousePressed() {
-  let leftPanelW = width / 3;
-  let btnX = leftPanelW + 20;
-  let btnY = rightPanelT - 80;
-  let btnW = 110;
-  let btnH = 40;
-  if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH) {
-    renderBlocks = activeBlocks.map(cloneBlockTree);
-    return;
-  }
-
-  // Handle Advancement Button Click Logic
-  let blocksBottom = 0;
-  for (let b of activeBlocks) {
-    if (b.y !== undefined && b.h !== undefined) {
-      blocksBottom = max(blocksBottom, b.y + b.h);
+  // Check if the user clicked inside either of the setup blocks
+  for (let i = 0; i < activeBlocks.length; i++) {
+    let b = activeBlocks[i];
+    // Check bounding box of the block tree
+    if (mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h) {
+      if (i === correctIndex) {
+        // They picked the right one!
+        // Provide visual feedback (could replace with UI animations)
+        console.log("Correct! Generating next challenge..."); 
+        selectSetup(); // Reset and generate next set
+      } else {
+        console.log("Incorrect! Try again.");
+        // Shake or error effect could go here
+      }
+      return;
     }
   }
-  if (blocksBottom === 0) blocksBottom = height / 2 + 60;
-  let promptY = blocksBottom + 40 + 25 + (currentPrompts.length * 32);
-  let nextBtnX = 20;
-  let nextBtnY = promptY + 15;
-  let nextBtnW = leftPanelW - 40;
-  let nextBtnH = 40;
-
-if (mouseX >= nextBtnX && mouseX <= nextBtnX + nextBtnW && mouseY >= nextBtnY && mouseY <= nextBtnY + nextBtnH) {
-  let checkAllSatisfied = currentPrompts.length > 0;
-  for (let p of currentPrompts) {
-    if (!evaluatePromptSatisfaction(p)) {
-      checkAllSatisfied = false;
-    }
-  }
-}
-
-	// Recalculate promptY base coordinate exactly like the layout engine does
-blocksBottom = 0;
-for (let b of activeBlocks) {
-  if (b.y !== undefined && b.h !== undefined) {
-    blocksBottom = max(blocksBottom, b.y + b.h);
-  }
-}
-if (blocksBottom === 0) blocksBottom = height / 2 + 60;
-promptY = blocksBottom + 40;
 }
 
 function triggerGlobalLayoutRefresh() {
   repositionBlock();
 }
 
-function selectSetup(index) {
-  currentSetupIndex = index; // cite: 2
-  let setupData = blockSetups[index]; // cite: 3
+let correctIndex = 0; // Tracks which setup (0 or 1) is currently being rendered
 
-  let setupContainer = new Block('function setup'); // cite: 4
-  currentPrompts = []; // cite: 5
-
-  // Identify if we are currently handling the "fill + text" level
-  let isFillTextLevel = (setupData.name && setupData.name.toLowerCase().includes('fill') && setupData.name.toLowerCase().includes('text')) || 
-                        (setupData.children.includes('fill') && setupData.children.includes('text'));
-
-  for (let type of setupData.children) { // cite: 6
-    let childBlock = new Block(type); // cite: 7
-    childBlock.parent = setupContainer; // cite: 8
-
-    // Apply custom initial values for the 'fill' blocks based on the level context
-    if (type === 'fill') {
-      if (isFillTextLevel) {
-        childBlock.args = [0, 0, 0];          // Level specific: Start at Black
-      } else {
-        childBlock.args = [255, 255, 255];    // Default: Start at White
-      }
-    }
-
-    setupContainer.children.push(childBlock); // cite: 9
-
-    if (PROMPT_DICTIONARY[type]) { // cite: 10
-      let stringPool = PROMPT_DICTIONARY[type]; // cite: 11
-      let selectedPrompt = random(stringPool); // cite: 12
-      let modifiedText = selectedPrompt; // cite: 15
-
-      let lowerPrompt = selectedPrompt.toLowerCase();
-      let randVal = 0;
-
-      if (
-        lowerPrompt.includes('move') || 
-        lowerPrompt.includes(' x ') || 
-        lowerPrompt.includes(' y ') || 
-        lowerPrompt.includes('position') || // Catches "x position" and "y position"
-        lowerPrompt.includes('bottom')
-      ) {
-        randVal = floor(random(-10, 800)); // Range: 0 to 600
-      } else if (
-        lowerPrompt.includes('color') || 
-        lowerPrompt.includes('red') || 
-        lowerPrompt.includes('green') || 
-        lowerPrompt.includes('blue') || 
-        lowerPrompt.includes('black') ||
-        lowerPrompt.includes('grey')
-      ) {
-        randVal = floor(random(0, 255)); // Range: 0 to 255
-      } else if (lowerPrompt.includes('strokeweight')) {
-        randVal = floor(random(0, 51));  // Range: 0 to 50
-      } else if (
-        lowerPrompt.includes('w') || 
-        lowerPrompt.includes('width') || 
-        lowerPrompt.includes('h') || 
-        lowerPrompt.includes('height') || 
-        lowerPrompt.includes('larger') || 
-        lowerPrompt.includes('smaller') ||
-        lowerPrompt.includes('diameter') || // Fits size changes for circles
-        lowerPrompt.includes('perfect square') ||
-        lowerPrompt.includes('perfect circle')
-      ) {
-        randVal = floor(random(10, 800)); // Range: 10 to 400
-      } else {
-        randVal = floor(random(0, 255)); // Fallback baseline
-      }
-
-  // Keep weightRandVal separate for dedicated strokeWeight placeholders if needed
-      let weightRandVal = floor(random(0, 50)); 
-      let finalTargetValue = randVal; // Track which value we actually use
-
-      // FIX 1: Check 'weightValue' FIRST to prevent 'value' from cannibalizing it
-      if (modifiedText.includes('weightValue')) { 
-        modifiedText = modifiedText.replace('weightValue', weightRandVal); 
-        finalTargetValue = weightRandVal; // Update our evaluation target
-      } else if (modifiedText.includes('value')) { 
-        modifiedText = modifiedText.replace('value', randVal); 
-        finalTargetValue = randVal;
-      }
-
-      // Store complete snapshot record including block properties right at point of creation
-      currentPrompts.push({ 
-        blockType: type, 
-        originalPrompt: selectedPrompt, 
-        promptText: modifiedText, 
-        randomValue: finalTargetValue, // FIX 2: Compare against the actual injected value
-        defaults: [...childBlock.args] 
-      });
-    }
+function selectSetup() {
+  const shapeTypes = ['circle', 'rect', 'ellipse'];
+  let chosenShape = random(shapeTypes);
+  let blockTypes = ['background', 'strokeWeight', 'stroke', 'fill', chosenShape];
+  
+  let setup0 = new Block('function setup');
+  let setup1 = new Block('function setup');
+  
+  for (let type of blockTypes) {
+    let b0 = new Block(type);
+    let b1 = new Block(type);
+    
+    b0.parent = setup0;
+    b1.parent = setup1;
+    
+    // Generate valid random args for the first set
+    let args0 = generateRandomArgs(type);
+    // Generate args for the second set that are >= 25% different
+    let args1 = generateDifferentArgs(type, args0);
+    
+    b0.args = args0;
+    b1.args = args1;
+    
+    setup0.children.push(b0);
+    setup1.children.push(b1);
   }
 
-  activeBlocks = [setupContainer]; // cite: 32
-  window.workspaceBlocks = activeBlocks; // cite: 33
-  repositionBlock(); // cite: 34
-  renderBlocks = activeBlocks.map(cloneBlockTree); // cite: 35
+  activeBlocks = [setup0, setup1];
+  window.workspaceBlocks = activeBlocks;
+  
+  // Randomly choose one to render on the right panel
+  correctIndex = floor(random(2));
+  renderBlocks = [cloneBlockTree(activeBlocks[correctIndex])];
+  
+  repositionBlock();
 }
 
 function repositionBlock() {
@@ -558,6 +473,49 @@ function drawWinScreen() {
   textStyle(BOLD);
   text("PLAY AGAIN ↺", width / 2, rBtnY + rBtnH / 2);
   pop();
+}
+
+function generateRandomArgs(type) {
+  if (['background', 'fill', 'stroke'].includes(type)) {
+     return [floor(random(0,255)), floor(random(0,255)), floor(random(0,255))];
+  } else if (type === 'strokeWeight') {
+     return [floor(random(1, 20))];
+  } else if (type === 'circle') {
+     return [floor(random(50, 300)), floor(random(50, 300)), floor(random(20, 100))]; // x, y, radius
+  } else if (type === 'ellipse') {
+     return [floor(random(50, 300)), floor(random(50, 300)), floor(random(20, 100)), floor(random(20, 100))]; // x, y, w, h
+  } else if (type === 'rect') {
+     return [floor(random(20, 200)), floor(random(20, 200)), floor(random(20, 100)), floor(random(20, 100))]; // x, y, w, h
+  }
+  return [];
+}
+
+function generateDifferentArgs(type, baseArgs) {
+  let newArgs = [];
+  for (let i = 0; i < baseArgs.length; i++) {
+    let val = baseArgs[i];
+    let diffRequirement = max(2, Math.abs(val * 0.25)); // Must be at least 25% different
+    
+    let newVal;
+    let attempts = 0;
+    do {
+      if (['background', 'fill', 'stroke'].includes(type)) {
+        newVal = floor(random(0, 255));
+      } else if (type === 'strokeWeight') {
+        newVal = floor(random(1, 20));
+      } else {
+        if (i < 2) { // x, y coordinates
+           newVal = floor(random(50, 400));
+        } else { // width, height, or radius
+           newVal = floor(random(20, 150));
+        }
+      }
+      attempts++;
+    } while (abs(newVal - val) < diffRequirement && attempts < 100);
+    
+    newArgs.push(newVal);
+  }
+  return newArgs;
 }
 
 class Block {
